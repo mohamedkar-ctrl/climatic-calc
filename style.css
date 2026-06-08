@@ -207,6 +207,52 @@ body {
 .sug-item { padding: 10px 14px; cursor: pointer; font-size: 12px; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
 .sug-item:hover { background: #f0f7ff; }
 
+/* GPS button */
+.btn-gps {
+  position: absolute; right: 40px; top: 50%; transform: translateY(-50%);
+  background: var(--cyan); color: white; border: none; border-radius: 4px;
+  width: 32px; height: 32px; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  box-shadow: 0 2px 6px rgba(41,152,178,0.3);
+}
+.btn-gps:hover { background: #1e7a91; transform: translateY(-50%) scale(1.05); }
+.btn-gps:disabled { opacity: 0.5; cursor: wait; }
+
+/* Historique */
+.history-section {
+  margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #fafbfc; position: relative; z-index: 2; overflow: hidden;
+}
+.history-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: linear-gradient(135deg, #f0f4f8, #fafbfc);
+  border-bottom: 1px solid var(--border);
+}
+.history-title { font-size: 11px; font-weight: 700; color: var(--navy); }
+.history-clear {
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  font-size: 10px; color: var(--text2); padding: 3px 8px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.history-clear:hover { border-color: #c62828; color: #c62828; }
+.history-scroll { max-height: 160px; overflow-y: auto; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.history-table th {
+  text-align: left; font-size: 9px; color: var(--text2); text-transform: uppercase;
+  letter-spacing: 0.3px; padding: 4px 8px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: #f0f4f8;
+}
+.history-table td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; }
+.history-table tr:hover { background: #f0f7ff; }
+.hist-affaire { font-weight: 600; color: var(--navy); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-load {
+  background: var(--cyan); color: white; border: none; border-radius: 3px;
+  width: 24px; height: 20px; font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.hist-load:hover { background: #1e7a91; }
+
 /* ═══ ZONE CARDS ═══ */
 .zone-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
 .zone-card {
@@ -435,7 +481,7 @@ body {
   .page { margin: 0; box-shadow: none; border: none; width: 210mm; min-height: 297mm; page-break-after: always; }
   .page:last-child { page-break-after: avoid; }
   .page::before { border-width: 1pt; }
-  .usage-bar, .btn-calc, .input-spinner, .suggestions, .modal-overlay { display: none !important; }
+  .usage-bar, .btn-calc, .input-spinner, .suggestions, .modal-overlay, .history-section, .btn-gps { display: none !important; }
   .leaflet-control-layers, .leaflet-control-zoom, .site-pin-pulse, .oro-legend { display: none !important; }
   .input-wrapper input { border: none; background: transparent; padding: 0; font-weight: 600; }
   .param-card input, .param-card select { border: none; background: transparent; padding: 0; font-weight: 600; -webkit-appearance: none; }

@@ -135,8 +135,10 @@ function calcQp(catId, z, vb0, c0) {
 // ═══ 5. ALTITUDE & OROGRAPHY ═══
 function offsetLL(lat,lon,b,d){const R=6371000;return[lat+(d*Math.cos(b*Math.PI/180))/R*180/Math.PI,lon+(d*Math.sin(b*Math.PI/180))/(R*Math.cos(lat*Math.PI/180))*180/Math.PI];}
 async function fetchAlt(lat,lon){
-  try{const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat.toFixed(6)},${lon.toFixed(6)}`);if(r.ok){const d=await r.json();if(d?.results?.[0])return Math.round(d.results[0].elevation);}}catch(e){}
+  // IGN RGE ALTI en primaire (précision 1m, fiable en France)
   try{const r=await fetch(`https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}&zonly=true`);if(r.ok){const d=await r.json();if(d?.elevations?.[0]>-999)return Math.round(d.elevations[0]);}}catch(e){}
+  // Fallback open-elevation (SRTM ~30m)
+  try{const r=await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat.toFixed(6)},${lon.toFixed(6)}`);if(r.ok){const d=await r.json();if(d?.results?.[0])return Math.round(d.results[0].elevation);}}catch(e){}
   return 0;
 }
 async function calcOro(lat,lon,altSite,zBat){
@@ -424,6 +426,34 @@ function initAddressLookup(){
     },280);
   });
   document.addEventListener('click',e=>{if(!e.target.closest('.input-group'))sug.style.display='none';});
+
+  // P6 — Bouton GPS
+  const gpsBtn=document.getElementById('btn-gps');
+  if(gpsBtn) gpsBtn.addEventListener('click',geolocateMe);
+}
+
+// ═══ 8b. GÉOLOCALISATION GPS ═══
+async function geolocateMe(){
+  const btn=document.getElementById('btn-gps');
+  if(!navigator.geolocation){alert('Géolocalisation non disponible sur ce navigateur.');return;}
+  btn.textContent='⏳';btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    try{
+      const r=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}&limit=1`);
+      if(r.ok){
+        const data=await r.json();
+        if(data.features?.length){
+          document.getElementById('addr-input').value=data.features[0].properties.label;
+          await selectAddr(data.features[0]);
+        }
+      }
+    }catch(e){console.log('[SIRIUS] Reverse geocode failed:',e);}
+    btn.textContent='📍';btn.disabled=false;
+  },err=>{
+    alert('Position GPS indisponible. Vérifiez les permissions de localisation.');
+    btn.textContent='📍';btn.disabled=false;
+  },{enableHighAccuracy:true,timeout:10000});
 }
 
 async function selectAddr(feature){
@@ -470,7 +500,8 @@ function doCalculation(){
   const mu1=calcMu1(alpha),s=mu1*state.sk;
   const sz=SISMO_DEPT[state.dept]||'1',agr=SISMO_AGR[sz]||0.4;
   const temps=TEMP_DEPT[state.dept]||[-12,36];
-  const tmin=temps[0]-Math.round(state.alt*0.6/100),tmax=temps[1]-Math.round(state.alt*0.6/100);
+  // P9 — Gradients thermiques affinés (AN EN 1991-1-5)
+  const tmin=temps[0]-Math.round(state.alt*0.65/100),tmax=temps[1]-Math.round(state.alt*0.6/100);
 
   // Fill page 2
   setVal('r-zn',state.zn);setVal('r-sk0',(NEIGE_SK0[state.zn]||0).toFixed(2)+' kN/m²');
@@ -489,12 +520,69 @@ function doCalculation(){
   const pn=document.getElementById('project-name').value||'—';
   setVal('hdr-project-p2',pn);
 
+  // P5 — Sauvegarder dans l'historique
+  saveToHistory({date:new Date().toLocaleDateString('fr-FR'),affaire:pn,commune:state.commune,dept:state.dept,alt:state.alt,
+    zn:state.zn,zv:state.zv,sk:state.sk.toFixed(2),s:s.toFixed(2),qp:qp,sismo:sz,lat:state.lat,lon:state.lon,
+    catId,alpha,z});
+  renderHistory();
+
   // Show page 2
   document.getElementById('page2').style.display='block';
   document.getElementById('page2').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ═══ 10. INIT ═══
+// ═══ 10. HISTORIQUE (localStorage) ═══
+const HISTORY_KEY='sirius_clim_history';
+const HISTORY_MAX=20;
+
+function getHistory(){ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
+
+function saveToHistory(entry){
+  const h=getHistory();
+  h.unshift(entry);
+  if(h.length>HISTORY_MAX) h.length=HISTORY_MAX;
+  localStorage.setItem(HISTORY_KEY,JSON.stringify(h));
+}
+
+function renderHistory(){
+  const container=document.getElementById('history-section');
+  const tbody=document.getElementById('history-body');
+  if(!container||!tbody) return;
+  const h=getHistory();
+  if(!h.length){container.style.display='none';return;}
+  container.style.display='block';
+  tbody.innerHTML='';
+  h.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.date}</td><td class="hist-affaire">${e.affaire||'—'}</td><td>${e.commune} (${e.dept})</td><td>${e.alt}m</td><td>${e.sk}</td><td>${(e.qp/1000).toFixed(2)}</td><td>${e.sismo}</td>
+      <td><button class="hist-load" onclick="loadHistory(${i})" title="Recharger">↩️</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function loadHistory(idx){
+  const h=getHistory();
+  const e=h[idx]; if(!e) return;
+  // Remplir les champs et simuler une recherche
+  document.getElementById('project-name').value=e.affaire||'';
+  document.getElementById('addr-input').value=`${e.commune} (${e.dept})`;
+  // Construire un faux feature pour selectAddr
+  const fakeFeature={properties:{label:`${e.commune}`,city:e.commune,citycode:e.dept+'000',postcode:'',context:''},
+    geometry:{coordinates:[e.lon,e.lat]}};
+  selectAddr(fakeFeature).then(()=>{
+    document.getElementById('z-height').value=e.z||10;
+    document.getElementById('terrain-cat').value=e.catId||'IIIb';
+    document.getElementById('roof-slope').value=e.alpha||5;
+  });
+}
+
+function clearHistory(){
+  if(!confirm('Effacer tout l\'historique ?')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+}
+
+// ═══ 11. INIT ═══
 document.addEventListener('DOMContentLoaded',()=>{
   // Date
   const now=new Date();const dateStr=now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -503,4 +591,5 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   loadCommuneData();initAddressLookup();initMap();updateTrialBar();
   document.getElementById('btn-calc').addEventListener('click',doCalculation);
+  renderHistory();
 });

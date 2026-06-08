@@ -87,6 +87,20 @@
     <div class="usage-track"><div class="usage-fill" id="usage-fill" style="width:100%"></div></div>
   </div>
 
+  <!-- HISTORIQUE -->
+  <div class="history-section" id="history-section" style="display:none;">
+    <div class="history-header">
+      <span class="history-title">📋 Historique des calculs</span>
+      <button class="history-clear" onclick="clearHistory()">🗑️ Effacer</button>
+    </div>
+    <div class="history-scroll">
+      <table class="history-table">
+        <thead><tr><th>Date</th><th>Affaire</th><th>Commune</th><th>Alt.</th><th>s<sub>k</sub></th><th>q<sub>p</sub></th><th>Sismo</th><th></th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- SECTION 1: LOCALISATION -->
   <section class="ndc-section">
     <h2 class="sec-title"><span class="sec-num">§1</span> Localisation du projet</h2>
@@ -94,6 +108,7 @@
       <label for="addr-input">📍 Adresse du chantier</label>
       <div class="input-wrapper">
         <input type="text" id="addr-input" placeholder="Saisir l'adresse complète du site…" autocomplete="off">
+        <button type="button" id="btn-gps" class="btn-gps" title="Utiliser ma position GPS">📍</button>
         <div class="input-spinner" id="addr-spinner" style="display:none;">⏳</div>
       </div>
       <div class="suggestions" id="addr-suggestions"></div>
