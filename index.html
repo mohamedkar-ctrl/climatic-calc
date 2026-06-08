@@ -182,9 +182,19 @@
         <span class="param-hint">EC1-1-4/NA Tab. 4.1</span>
       </div>
       <div class="param-card">
-        <label for="roof-slope">Pente toiture α (°)</label>
+        <label for="roof-slope">Pente α (°)</label>
         <input type="number" id="roof-slope" value="5" min="0" max="60" step="0.5">
-        <span class="param-hint">Coefficient de forme μ₁</span>
+        <span class="param-hint">Coeff. de forme μ₁</span>
+      </div>
+      <div class="param-card">
+        <label for="import-cat">Cat. importance (EC8)</label>
+        <select id="import-cat">
+          <option value="I">I — Faible occupation (γᵢ=0.8)</option>
+          <option value="II" selected>II — Courant (γᵢ=1.0)</option>
+          <option value="III">III — ERP, écoles (γᵢ=1.2)</option>
+          <option value="IV">IV — Vital / ICPE (γᵢ=1.4)</option>
+        </select>
+        <span class="param-hint">EN 1998-1 Tab. 4.3</span>
       </div>
       <div class="param-card">
         <label for="soil-class">Classe de sol (EC8)</label>
@@ -268,7 +278,7 @@
         <table class="result-table compact">
           <tr><td>Zone</td><td id="r-sismo-zone">—</td></tr>
           <tr><td>a<sub>gr</sub></td><td id="r-agr">—</td></tr>
-          <tr><td>Cat. importance</td><td>II (γ<sub>I</sub>=1.0)</td></tr>
+          <tr><td>Cat. importance</td><td id="r-import-cat">—</td></tr>
           <tr><td>Classe de sol</td><td id="r-soil">—</td></tr>
           <tr><td>Coeff. sol S</td><td id="r-soil-s">—</td></tr>
           <tr><td class="result-src" colspan="2" id="r-sismo-src"></td></tr>

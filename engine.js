@@ -14,6 +14,7 @@ const SISMO_DEPT={"01":"2","02":"1","03":"2","04":"4","05":"4","06":"4","07":"2"
 const SISMO_AGR={"1":0.4,"2":0.7,"3":1.1,"4":1.6,"5":3.0};
 const SISMO_LABELS={'1':'Très faible','2':'Faible','3':'Modérée','4':'Moyenne','5':'Forte'};
 const SOIL_S={'A':1.0,'B':1.2,'C':1.15,'D':1.35,'E':1.4}; // EC8 Tab. 3.2 (Type 1)
+const GAMMA_I={'I':0.8,'II':1.0,'III':1.2,'IV':1.4}; // EC8 Tab. 4.3
 const TEMP_DEPT={"01":[-15,38],"02":[-12,35],"03":[-15,36],"04":[-18,38],"05":[-20,35],"06":[-5,38],"07":[-12,38],"08":[-15,35],"09":[-15,38],"10":[-15,35],"11":[-8,40],"12":[-15,36],"13":[-8,40],"14":[-10,33],"15":[-18,35],"16":[-10,37],"17":[-8,37],"18":[-12,36],"19":[-15,36],"2A":[-5,38],"2B":[-5,38],"21":[-15,36],"22":[-5,33],"23":[-15,35],"24":[-10,38],"25":[-18,35],"26":[-12,40],"27":[-10,35],"28":[-12,35],"29":[-5,32],"30":[-8,40],"31":[-10,38],"32":[-8,38],"33":[-8,38],"34":[-8,40],"35":[-8,35],"36":[-12,36],"37":[-10,37],"38":[-18,38],"39":[-18,36],"40":[-8,38],"41":[-12,37],"42":[-15,37],"43":[-18,35],"44":[-8,35],"45":[-12,37],"46":[-10,38],"47":[-8,38],"48":[-18,35],"49":[-8,36],"50":[-8,32],"51":[-15,35],"52":[-18,35],"53":[-8,35],"54":[-15,35],"55":[-15,35],"56":[-5,33],"57":[-15,35],"58":[-15,36],"59":[-12,35],"60":[-12,35],"61":[-10,35],"62":[-12,33],"63":[-15,36],"64":[-8,38],"65":[-12,38],"66":[-8,40],"67":[-18,36],"68":[-18,36],"69":[-15,38],"70":[-18,36],"71":[-15,37],"72":[-10,36],"73":[-20,35],"74":[-20,35],"75":[-12,36],"76":[-10,33],"77":[-12,36],"78":[-12,36],"79":[-8,37],"80":[-12,33],"81":[-10,38],"82":[-8,38],"83":[-5,40],"84":[-8,40],"85":[-8,35],"86":[-10,37],"87":[-12,36],"88":[-18,35],"89":[-15,36],"90":[-18,35],"91":[-12,36],"92":[-12,36],"93":[-12,36],"94":[-12,36],"95":[-12,36]};
 
 // ═══ 2. TRIAL LIMITER (2 months) ═══
@@ -531,6 +532,8 @@ function doCalculation(){
   const sz=state.sismoZone||SISMO_DEPT[state.dept]||'1',agr=SISMO_AGR[sz]||0.4;
   const soilClass=document.getElementById('soil-class').value;
   const soilS=SOIL_S[soilClass]||1.0;
+  const importCat=document.getElementById('import-cat').value;
+  const gammaI=GAMMA_I[importCat]||1.0;
   const temps=TEMP_DEPT[state.dept]||[-12,36];
   // P9 — Gradients thermiques affinés (AN EN 1991-1-5)
   const tmin=temps[0]-Math.round(state.alt*0.65/100),tmax=temps[1]-Math.round(state.alt*0.6/100);
@@ -545,8 +548,9 @@ function doCalculation(){
   setVal('r-z0zmin',cat.z0+'m / '+cat.zmin+'m');
   setVal('r-cr',cr.toFixed(3));setVal('r-qp',qp+' Pa ('+( qp/1000).toFixed(2)+' kN/m²)');
   setVal('r-sismo-zone',sz+' — '+(SISMO_LABELS[sz]||''));setVal('r-agr',agr.toFixed(1)+' m/s²');
+  setVal('r-import-cat',importCat+' (γᵢ='+gammaI.toFixed(1)+')');
   setVal('r-soil',soilClass+' — S = '+soilS.toFixed(2));
-  setVal('r-soil-s',(agr*soilS).toFixed(2)+' m/s² (aₒₓ·S)');
+  setVal('r-soil-s',(agr*gammaI*soilS).toFixed(2)+' m/s² (aₒₓ·γᵢ·S)');
   const srcEl=document.getElementById('r-sismo-src');
   if(srcEl) srcEl.innerHTML=`<em style="font-size:9px;color:#999">📍 Source : ${state.sismoSrc||'département'} — Classe de sol à confirmer par étude géotechnique</em>`;
   setVal('r-temp',tmin+'°C / '+tmax+'°C');
