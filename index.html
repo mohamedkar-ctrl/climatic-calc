@@ -186,8 +186,20 @@
         <input type="number" id="roof-slope" value="5" min="0" max="60" step="0.5">
         <span class="param-hint">Coefficient de forme μ₁</span>
       </div>
+      <div class="param-card">
+        <label for="soil-class">Classe de sol (EC8)</label>
+        <select id="soil-class">
+          <option value="A">A — Rocher (vs > 800 m/s)</option>
+          <option value="B" selected>B — Sol ferme (360-800 m/s)</option>
+          <option value="C">C — Sol meuble (180-360 m/s)</option>
+          <option value="D">D — Sol mou (< 180 m/s)</option>
+          <option value="E">E — Profil spécial</option>
+        </select>
+        <span class="param-hint">ℹ️ À confirmer par étude géotechnique</span>
+      </div>
     </div>
     <button class="btn-calc" id="btn-calc">⚡ Calculer les charges climatiques</button>
+    <button class="btn-print" id="btn-print" style="display:none;" onclick="window.print()">🖨️ Imprimer / PDF A4</button>
   </section>
 
   <!-- FOOTER PAGE 1 -->
@@ -257,6 +269,9 @@
           <tr><td>Zone</td><td id="r-sismo-zone">—</td></tr>
           <tr><td>a<sub>gr</sub></td><td id="r-agr">—</td></tr>
           <tr><td>Cat. importance</td><td>II (γ<sub>I</sub>=1.0)</td></tr>
+          <tr><td>Classe de sol</td><td id="r-soil">—</td></tr>
+          <tr><td>Coeff. sol S</td><td id="r-soil-s">—</td></tr>
+          <tr><td class="result-src" colspan="2" id="r-sismo-src"></td></tr>
         </table>
       </div>
       <div class="result-block">
@@ -271,7 +286,7 @@
 
     <!-- DISCLAIMER -->
     <div class="disclaimer">
-      <strong>⚠️</strong> Valeurs indicatives de pré-dimensionnement. Vérification par ingénieur qualifié requise. Données communales : bases AFNOR (Excel AN).
+      <strong>⚠️</strong> Valeurs indicatives de pré-dimensionnement. Vérification par ingénieur qualifié requise. Données communales : bases AFNOR (Excel AN). <strong>Classe de sol à confirmer par étude géotechnique (mission G1/G2).</strong>
     </div>
   </section>
 

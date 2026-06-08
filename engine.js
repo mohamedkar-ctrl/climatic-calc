@@ -12,7 +12,8 @@ const VENT_VB0={"1":22,"2":24,"3":26,"4":28};
 const TERRAIN={"0":{z0:0.005,zmin:1,kr:0.156,label:"Mer, zone côtière"},"II":{z0:0.05,zmin:2,kr:0.190,label:"Rase campagne"},"IIIa":{z0:0.20,zmin:5,kr:0.215,label:"Campagne avec haies"},"IIIb":{z0:0.50,zmin:9,kr:0.234,label:"Zone industrielle"},"IV":{z0:1.00,zmin:15,kr:0.262,label:"Urbain dense"}};
 const SISMO_DEPT={"01":"2","02":"1","03":"2","04":"4","05":"4","06":"4","07":"2","08":"1","09":"3","10":"1","11":"2","12":"1","13":"3","14":"2","15":"2","16":"1","17":"2","18":"1","19":"1","2A":"1","2B":"1","21":"2","22":"2","23":"1","24":"1","25":"3","26":"3","27":"1","28":"1","29":"2","30":"2","31":"2","32":"1","33":"2","34":"2","35":"2","36":"1","37":"1","38":"4","39":"3","40":"2","41":"1","42":"2","43":"2","44":"2","45":"1","46":"1","47":"1","48":"2","49":"2","50":"2","51":"1","52":"1","53":"2","54":"1","55":"1","56":"2","57":"1","58":"2","59":"1","60":"1","61":"2","62":"1","63":"2","64":"4","65":"4","66":"4","67":"3","68":"3","69":"2","70":"2","71":"2","72":"2","73":"4","74":"4","75":"1","76":"1","77":"1","78":"1","79":"2","80":"1","81":"1","82":"1","83":"3","84":"3","85":"2","86":"2","87":"1","88":"2","89":"1","90":"3","91":"1","92":"1","93":"1","94":"1","95":"1"};
 const SISMO_AGR={"1":0.4,"2":0.7,"3":1.1,"4":1.6,"5":3.0};
-const SISMO_LABELS={"1":"Très faible","2":"Faible","3":"Modérée","4":"Moyenne","5":"Forte"};
+const SISMO_LABELS={'1':'Très faible','2':'Faible','3':'Modérée','4':'Moyenne','5':'Forte'};
+const SOIL_S={'A':1.0,'B':1.2,'C':1.15,'D':1.35,'E':1.4}; // EC8 Tab. 3.2 (Type 1)
 const TEMP_DEPT={"01":[-15,38],"02":[-12,35],"03":[-15,36],"04":[-18,38],"05":[-20,35],"06":[-5,38],"07":[-12,38],"08":[-15,35],"09":[-15,38],"10":[-15,35],"11":[-8,40],"12":[-15,36],"13":[-8,40],"14":[-10,33],"15":[-18,35],"16":[-10,37],"17":[-8,37],"18":[-12,36],"19":[-15,36],"2A":[-5,38],"2B":[-5,38],"21":[-15,36],"22":[-5,33],"23":[-15,35],"24":[-10,38],"25":[-18,35],"26":[-12,40],"27":[-10,35],"28":[-12,35],"29":[-5,32],"30":[-8,40],"31":[-10,38],"32":[-8,38],"33":[-8,38],"34":[-8,40],"35":[-8,35],"36":[-12,36],"37":[-10,37],"38":[-18,38],"39":[-18,36],"40":[-8,38],"41":[-12,37],"42":[-15,37],"43":[-18,35],"44":[-8,35],"45":[-12,37],"46":[-10,38],"47":[-8,38],"48":[-18,35],"49":[-8,36],"50":[-8,32],"51":[-15,35],"52":[-18,35],"53":[-8,35],"54":[-15,35],"55":[-15,35],"56":[-5,33],"57":[-15,35],"58":[-15,36],"59":[-12,35],"60":[-12,35],"61":[-10,35],"62":[-12,33],"63":[-15,36],"64":[-8,38],"65":[-12,38],"66":[-8,40],"67":[-18,36],"68":[-18,36],"69":[-15,38],"70":[-18,36],"71":[-15,37],"72":[-10,36],"73":[-20,35],"74":[-20,35],"75":[-12,36],"76":[-10,33],"77":[-12,36],"78":[-12,36],"79":[-8,37],"80":[-12,33],"81":[-10,38],"82":[-8,38],"83":[-5,40],"84":[-8,40],"85":[-8,35],"86":[-10,37],"87":[-12,36],"88":[-18,35],"89":[-15,36],"90":[-18,35],"91":[-12,36],"92":[-12,36],"93":[-12,36],"94":[-12,36],"95":[-12,36]};
 
 // ═══ 2. TRIAL LIMITER (2 months) ═══
@@ -471,12 +472,19 @@ async function selectAddr(feature){
   state.zn=lookupZone(communeNeige,NEIGE_DEFAULT,dept,state.commune);
   state.zv=lookupZone(communeVent,VENT_DEFAULT,dept,state.commune);
   state.sk=calcSk(state.zn,state.alt);state.vb0=VENT_VB0[state.zv]||0;
+  state.citycode=p.citycode||'';
 
   setVal('val-commune',state.commune);setVal('det-commune',`Dept. ${dept} · CP ${p.postcode||'—'}`);
   setVal('val-alt',state.alt+'m');setVal('val-zn',state.zn);
   setVal('det-zn',`sk₀ = ${(NEIGE_SK0[state.zn]||0).toFixed(2)} kN/m²`);
   setVal('val-zv',state.zv);setVal('det-zv',`vb,0 = ${state.vb0} m/s`);
-  const sz=SISMO_DEPT[dept]||'1';setVal('val-sismo',sz);setVal('det-sismo',SISMO_LABELS[sz]||'—');
+
+  // P7 — Sismique communale Géorisques (async, fallback départemental)
+  const szDept=SISMO_DEPT[dept]||'1';
+  setVal('val-sismo',szDept);setVal('det-sismo',SISMO_LABELS[szDept]||'—');
+  state.sismoSrc='département';
+  state.sismoZone=szDept;
+  fetchGeorisquesSismo(p.citycode,dept);
 
   document.getElementById('zone-grid').style.display='grid';
   document.getElementById('map-container').style.display='block';
@@ -487,6 +495,28 @@ async function selectAddr(feature){
   document.getElementById('sec-params').style.display='block';
 }
 
+// ═══ 8c. GÉORISQUES SISMIQUE COMMUNALE ═══
+async function fetchGeorisquesSismo(citycode,dept){
+  if(!citycode) return;
+  try{
+    const r=await fetch(`https://www.georisques.gouv.fr/api/v1/zonage_sismique?code_insee=${citycode}&rayon=0`);
+    if(!r.ok) throw 0;
+    const data=await r.json();
+    if(data?.data?.length){
+      const geo=data.data[0];
+      const zoneGeo=geo.code_zone;
+      state.sismoZone=zoneGeo;
+      state.sismoSrc=`Géorisques (commune ${geo.libelle_commune})`;
+      setVal('val-sismo',zoneGeo);
+      setVal('det-sismo',(SISMO_LABELS[zoneGeo]||'—')+' ✓');
+      // Alerter si différence avec le département
+      const szDept=SISMO_DEPT[dept]||'1';
+      if(zoneGeo!==szDept){
+        setVal('det-sismo',(SISMO_LABELS[zoneGeo]||'')+` ⚠️ (dept: ${szDept})`);
+      }
+    }
+  }catch(e){console.log('[SIRIUS] Géorisques API unavailable, fallback département');}
+}
 // ═══ 9. CALCULATION ═══
 function doCalculation(){
   if(!checkTrialLimit())return;
@@ -498,7 +528,9 @@ function doCalculation(){
 
   const cat=TERRAIN[catId],cr=calcCr(catId,z),qp=calcQp(catId,z,state.vb0,state.c0);
   const mu1=calcMu1(alpha),s=mu1*state.sk;
-  const sz=SISMO_DEPT[state.dept]||'1',agr=SISMO_AGR[sz]||0.4;
+  const sz=state.sismoZone||SISMO_DEPT[state.dept]||'1',agr=SISMO_AGR[sz]||0.4;
+  const soilClass=document.getElementById('soil-class').value;
+  const soilS=SOIL_S[soilClass]||1.0;
   const temps=TEMP_DEPT[state.dept]||[-12,36];
   // P9 — Gradients thermiques affinés (AN EN 1991-1-5)
   const tmin=temps[0]-Math.round(state.alt*0.65/100),tmax=temps[1]-Math.round(state.alt*0.6/100);
@@ -513,6 +545,10 @@ function doCalculation(){
   setVal('r-z0zmin',cat.z0+'m / '+cat.zmin+'m');
   setVal('r-cr',cr.toFixed(3));setVal('r-qp',qp+' Pa ('+( qp/1000).toFixed(2)+' kN/m²)');
   setVal('r-sismo-zone',sz+' — '+(SISMO_LABELS[sz]||''));setVal('r-agr',agr.toFixed(1)+' m/s²');
+  setVal('r-soil',soilClass+' — S = '+soilS.toFixed(2));
+  setVal('r-soil-s',(agr*soilS).toFixed(2)+' m/s² (aₒₓ·S)');
+  const srcEl=document.getElementById('r-sismo-src');
+  if(srcEl) srcEl.innerHTML=`<em style="font-size:9px;color:#999">📍 Source : ${state.sismoSrc||'département'} — Classe de sol à confirmer par étude géotechnique</em>`;
   setVal('r-temp',tmin+'°C / '+tmax+'°C');
   setVal('r-dt-exp','+'+(tmax-10)+' °C');setVal('r-dt-con',(10-tmin)+' °C');
 
@@ -526,8 +562,9 @@ function doCalculation(){
     catId,alpha,z});
   renderHistory();
 
-  // Show page 2
+  // Show page 2 + print button
   document.getElementById('page2').style.display='block';
+  document.getElementById('btn-print').style.display='inline-block';
   document.getElementById('page2').scrollIntoView({behavior:'smooth',block:'start'});
 }
 

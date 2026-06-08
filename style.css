@@ -386,7 +386,7 @@ body {
 .wind-zoom-sub { font-size: 8px; color: #999; margin-top: 1px; }
 
 /* ═══ PARAMS ═══ */
-.params-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.params-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
 .param-card {
   border: 1.5px solid var(--border); border-radius: var(--radius); padding: 10px; background: #fafbfc;
 }
@@ -410,6 +410,18 @@ body {
 }
 .btn-calc:hover { transform: translateX(-50%) translateY(-2px); box-shadow: 0 8px 32px rgba(41,152,178,0.5); }
 .btn-calc:disabled { opacity: 0.5; cursor: not-allowed; transform: translateX(-50%); box-shadow: none; }
+
+.btn-print {
+  display: inline-block; margin: 10px auto 0; padding: 10px 24px;
+  background: linear-gradient(135deg, var(--navy), #1a2547);
+  color: white; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 3px 12px rgba(12,18,47,0.3);
+}
+.btn-print:hover { transform: translateY(-1px); box-shadow: 0 5px 20px rgba(12,18,47,0.4); }
+
+.result-src { border-top: 1px dashed var(--border); padding-top: 6px !important; }
 
 /* ═══ RESULTS ═══ */
 .result-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: #fafbfc; }
@@ -481,7 +493,7 @@ body {
   .page { margin: 0; box-shadow: none; border: none; width: 210mm; min-height: 297mm; page-break-after: always; }
   .page:last-child { page-break-after: avoid; }
   .page::before { border-width: 1pt; }
-  .usage-bar, .btn-calc, .input-spinner, .suggestions, .modal-overlay, .history-section, .btn-gps { display: none !important; }
+  .usage-bar, .btn-calc, .btn-print, .input-spinner, .suggestions, .modal-overlay, .history-section, .btn-gps { display: none !important; }
   .leaflet-control-layers, .leaflet-control-zoom, .site-pin-pulse, .oro-legend { display: none !important; }
   .input-wrapper input { border: none; background: transparent; padding: 0; font-weight: 600; }
   .param-card input, .param-card select { border: none; background: transparent; padding: 0; font-weight: 600; -webkit-appearance: none; }
