@@ -150,42 +150,254 @@ async function calcOro(lat,lon,altSite,zBat){
   }catch(e){return{c0:1.00,elev:[]};}
 }
 
-// ═══ 6. MAP ═══
-let siteMap=null,siteMapZoom=null,siteMarker=null,siteCircle=null,oroMarkers=[];
+// ═══ 6. MAP (IGN Géoportail + multi-couches) ═══
+let siteMap=null,siteMapZoom=null,siteMarker=null,siteCircle=null,oroMarkers=[],oroLegend=null;
 let zoomMarker=null;
-function addSatTiles(map){
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© ESRI',maxZoom:19}).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+
+function createLayers(defaultSat){
+  const planIGN = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+    {attribution:'© IGN',maxZoom:19,minZoom:2});
+  const topoScan25 = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+    {attribution:'© IGN Scan25',maxZoom:18,minZoom:2});
+  const orthoIGN = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+    {attribution:'© IGN Orthophotos',maxZoom:20,minZoom:2});
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap',maxZoom:19});
+  const cadastre = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+    {attribution:'© IGN Cadastre',maxZoom:20,minZoom:2,opacity:0.6});
+  return {
+    bases: {'🗺️ Plan IGN':planIGN,'🏔️ Topo (Scan25)':topoScan25,'🛰️ Satellite IGN':orthoIGN,'🌍 OpenStreetMap':osm},
+    overlays: {'📐 Cadastre':cadastre},
+    defaultBase: defaultSat ? orthoIGN : planIGN
+  };
 }
+
+function createSiteIcon(){
+  return L.divIcon({
+    className:'site-marker-icon',
+    html:'<div class="site-pin"><div class="site-pin-inner">📍</div><div class="site-pin-pulse"></div></div>',
+    iconSize:[36,36],iconAnchor:[18,36],popupAnchor:[0,-36]
+  });
+}
+
 function initMap(){
   if(!document.getElementById('site-map'))return;
-  siteMap=L.map('site-map',{center:[46.6,2.5],zoom:6,scrollWheelZoom:true});
-  addSatTiles(siteMap);
-  siteMapZoom=L.map('site-map-zoom',{center:[46.6,2.5],zoom:8,scrollWheelZoom:true});
-  addSatTiles(siteMapZoom);
+  // Carte 1 — Vue régionale (Plan IGN par défaut)
+  const layers1=createLayers(false);
+  siteMap=L.map('site-map',{center:[46.6,2.5],zoom:6,scrollWheelZoom:true,zoomControl:false});
+  layers1.defaultBase.addTo(siteMap);
+  L.control.zoom({position:'topright'}).addTo(siteMap);
+  L.control.layers(layers1.bases,layers1.overlays,{position:'topleft',collapsed:true}).addTo(siteMap);
+  L.control.scale({imperial:false,position:'bottomleft'}).addTo(siteMap);
+
+  // Carte 2 — Vue rapprochée (Satellite IGN par défaut)
+  const layers2=createLayers(true);
+  siteMapZoom=L.map('site-map-zoom',{center:[46.6,2.5],zoom:8,scrollWheelZoom:true,zoomControl:false});
+  layers2.defaultBase.addTo(siteMapZoom);
+  L.control.zoom({position:'topright'}).addTo(siteMapZoom);
+  L.control.layers(layers2.bases,layers2.overlays,{position:'topleft',collapsed:true}).addTo(siteMapZoom);
+  L.control.scale({imperial:false,position:'bottomleft'}).addTo(siteMapZoom);
 }
+
 function updateMap(lat,lon,alt){
   if(!siteMap)return;
-  const zoomRegional=14, zoomClose=16;
+  const zoomRegional=14, zoomClose=17;
   siteMap.setView([lat,lon],zoomRegional);
   siteMapZoom.setView([lat,lon],zoomClose);
 
+  const popupHtml=`<div style="font-family:Inter,sans-serif;font-size:12px;line-height:1.6;min-width:150px">
+    <div style="font-weight:700;font-size:13px;color:#0C122F;margin-bottom:3px">📍 Site du projet</div>
+    <div><span style="color:#5D7380">Alt.</span> <strong>${alt} m</strong></div>
+    <div><span style="color:#5D7380">Lat</span> ${lat.toFixed(5)}°</div>
+    <div><span style="color:#5D7380">Lon</span> ${lon.toFixed(5)}°</div>
+  </div>`;
+
+  // Marqueur carte régionale
   if(siteMarker)siteMap.removeLayer(siteMarker);
-  siteMarker=L.marker([lat,lon]).addTo(siteMap).bindPopup(`<b>📍 Site</b><br>Alt. ${alt} m`).openPopup();
+  siteMarker=L.marker([lat,lon],{icon:createSiteIcon()}).addTo(siteMap).bindPopup(popupHtml,{maxWidth:200}).openPopup();
+
+  // Marqueur carte rapprochée
   if(zoomMarker)siteMapZoom.removeLayer(zoomMarker);
-  zoomMarker=L.marker([lat,lon]).addTo(siteMapZoom).bindPopup(`<b>📍 Site</b><br>Alt. ${alt} m`).openPopup();
+  zoomMarker=L.marker([lat,lon],{icon:createSiteIcon()}).addTo(siteMapZoom).bindPopup(popupHtml,{maxWidth:200}).openPopup();
 
+  // Cercle orographique 1km (carte régionale uniquement)
   if(siteCircle)siteMap.removeLayer(siteCircle);
-  siteCircle=L.circle([lat,lon],{radius:1000,color:'#2998B2',weight:2,opacity:0.7,fillColor:'#2998B2',fillOpacity:0.08,dashArray:'6,4'}).addTo(siteMap);
+  siteCircle=L.circle([lat,lon],{radius:1000,color:'#2998B2',weight:2,opacity:0.7,fillColor:'#2998B2',fillOpacity:0.06,dashArray:'8,6'}).addTo(siteMap);
 
+  // Points orographiques (carte régionale uniquement)
   oroMarkers.forEach(m=>{siteMap.removeLayer(m);});oroMarkers=[];
-  const colors=['#e53935','#fb8c00','#43a047','#1e88e5'],names=['N','E','S','W'];
-  [0,90,180,270].forEach((d,i)=>[500,1000].forEach(dist=>{
-    const[pL,pN]=offsetLL(lat,lon,d,dist);
-    const m=L.circleMarker([pL,pN],{radius:dist===500?5:7,color:colors[i],weight:2,fillColor:colors[i],fillOpacity:0.5}).addTo(siteMap);
-    m.bindTooltip(`${names[i]} ${dist}m`,{permanent:false,direction:'top'});oroMarkers.push(m);
+  const dirs=[{b:0,name:'N',color:'#e53935'},{b:90,name:'E',color:'#fb8c00'},{b:180,name:'S',color:'#43a047'},{b:270,name:'O',color:'#1e88e5'}];
+  dirs.forEach(dir=>[500,1000].forEach(dist=>{
+    const[pL,pN]=offsetLL(lat,lon,dir.b,dist);
+    const m=L.circleMarker([pL,pN],{radius:dist===500?5:7,color:dir.color,weight:2.5,fillColor:dir.color,fillOpacity:0.4}).addTo(siteMap);
+    m.bindTooltip(`<span style="font-weight:600;font-size:11px">${dir.name} · ${dist}m</span>`,{permanent:dist===1000,direction:'top',className:'oro-tooltip'});
+    oroMarkers.push(m);
   }));
-  setTimeout(()=>{siteMap.invalidateSize();siteMapZoom.invalidateSize();siteMap.fitBounds(siteCircle.getBounds().pad(0.1));},300);
+
+  // Légende orographique (carte régionale)
+  if(oroLegend)siteMap.removeControl(oroLegend);
+  oroLegend=L.control({position:'bottomright'});
+  oroLegend.onAdd=function(){
+    const d=L.DomUtil.create('div','oro-legend');
+    d.innerHTML=`<div class="oro-legend-title">Orographie c₀(z)</div>
+      <div class="oro-legend-row"><span class="oro-dot" style="background:#e53935"></span> Nord</div>
+      <div class="oro-legend-row"><span class="oro-dot" style="background:#fb8c00"></span> Est</div>
+      <div class="oro-legend-row"><span class="oro-dot" style="background:#43a047"></span> Sud</div>
+      <div class="oro-legend-row"><span class="oro-dot" style="background:#1e88e5"></span> Ouest</div>
+      <div class="oro-legend-sub">⊙ 500m &nbsp; ◉ 1000m</div>`;
+    return d;
+  };
+  oroLegend.addTo(siteMap);
+
+  // Vent dominant — Open-Meteo (async, non-bloquant)
+  fetchWindRose(lat,lon);
+
+  // Afficher source
+  const src=document.getElementById('map-source'); if(src) src.style.display='block';
+
+  setTimeout(()=>{siteMap.invalidateSize();siteMapZoom.invalidateSize();siteMap.fitBounds(siteCircle.getBounds().pad(0.15));},300);
+}
+
+// ═══ 6b. VENT DOMINANT (Open-Meteo) ═══
+let windControl=null, windArrow=null, windArrowHead=null;
+const WIND_SECTORS=['N','NE','E','SE','S','SO','O','NO'];
+
+async function fetchWindRose(lat,lon){
+  try{
+    // 30 ans d'historique ERA5 — cohérent avec période de retour 50 ans (Eurocode)
+    const end=new Date(); const start=new Date(); start.setFullYear(start.getFullYear()-30);
+    const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const nbYears=30;
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&start_date=${fmt(start)}&end_date=${fmt(end)}&daily=wind_direction_10m_dominant,wind_speed_10m_max&timezone=Europe/Paris&models=era5_seamless`;
+    const r=await fetch(url); if(!r.ok) throw 0;
+    const data=await r.json();
+    if(!data.daily?.wind_direction_10m_dominant) throw 0;
+
+    const dirs=data.daily.wind_direction_10m_dominant;
+    const speeds=data.daily.wind_speed_10m_max||[];
+    const n=dirs.length;
+
+    // Calculer fréquences par secteur (8 secteurs de 45°)
+    const freq=[0,0,0,0,0,0,0,0]; // N,NE,E,SE,S,SO,O,NO
+    const avgSpeed=[0,0,0,0,0,0,0,0];
+    let validCount=0;
+    dirs.forEach((d,i)=>{
+      if(d===null||d===undefined) return;
+      const sector=Math.round(((d%360)+360)%360/45)%8;
+      freq[sector]++;
+      if(speeds[i]) avgSpeed[sector]+=speeds[i];
+      validCount++;
+    });
+    if(validCount<30) return; // pas assez de données
+
+    // Normaliser
+    const maxFreq=Math.max(...freq);
+    const pct=freq.map(f=>Math.round(f/validCount*100));
+    const norm=freq.map(f=>f/maxFreq);
+    avgSpeed.forEach((s,i)=>{ if(freq[i]>0) avgSpeed[i]=s/freq[i]; });
+
+    // Direction dominante
+    const domIdx=freq.indexOf(maxFreq);
+    const domAngle=domIdx*45;
+    const domName=WIND_SECTORS[domIdx];
+    const domPct=pct[domIdx];
+    const domSpeed=avgSpeed[domIdx];
+
+    // Dessiner rose des vents (SVG) sur la carte régionale
+    const yearsData=Math.round(validCount/365);
+    drawWindRose(norm,pct,domName,domPct,domSpeed,yearsData);
+
+    // Flèche vent dominant sur la carte rapprochée
+    drawWindArrow(lat,lon,domAngle,domName,domPct,domSpeed);
+
+  }catch(e){console.log('[SIRIUS] Wind data unavailable:',e);}
+}
+
+function drawWindRose(norm,pct,domName,domPct,domSpeed,yearsData){
+  if(windControl) siteMap.removeControl(windControl);
+  windControl=L.control({position:'topleft'});
+  windControl.onAdd=function(){
+    const d=L.DomUtil.create('div','wind-rose-ctrl');
+    const size=130, cx=size/2, cy=size/2, maxR=50;
+    // SVG rose des vents
+    let svg=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+    // Cercles de référence
+    [0.25,0.5,0.75,1].forEach(r=>{
+      svg+=`<circle cx="${cx}" cy="${cy}" r="${maxR*r}" fill="none" stroke="#d0d7de" stroke-width="0.5" stroke-dasharray="2,2"/>`;
+    });
+    // Axes
+    for(let i=0;i<8;i++){
+      const a=(i*45-90)*Math.PI/180;
+      svg+=`<line x1="${cx}" y1="${cy}" x2="${cx+maxR*Math.cos(a)}" y2="${cy+maxR*Math.sin(a)}" stroke="#d0d7de" stroke-width="0.5"/>`;
+    }
+    // Polygone de fréquence
+    let pts='';
+    norm.forEach((n,i)=>{
+      const a=(i*45-90)*Math.PI/180;
+      const r=Math.max(0.08,n)*maxR;
+      pts+=`${cx+r*Math.cos(a)},${cy+r*Math.sin(a)} `;
+    });
+    svg+=`<polygon points="${pts}" fill="rgba(41,152,178,0.25)" stroke="#2998B2" stroke-width="1.5"/>`;
+    // Labels secteurs
+    WIND_SECTORS.forEach((name,i)=>{
+      const a=(i*45-90)*Math.PI/180;
+      const lr=maxR+10;
+      const bold=i===norm.indexOf(Math.max(...norm));
+      svg+=`<text x="${cx+lr*Math.cos(a)}" y="${cy+lr*Math.sin(a)}" text-anchor="middle" dominant-baseline="central" font-size="${bold?10:8}" font-weight="${bold?700:400}" fill="${bold?'#0C122F':'#5D7380'}" font-family="Inter,sans-serif">${name}</text>`;
+    });
+    svg+='</svg>';
+
+    d.innerHTML=`<div class="wind-rose-title">🌬️ Rose des vents</div>
+      ${svg}
+      <div class="wind-rose-info">
+        <div class="wind-rose-dom"><strong>${domName}</strong> dominant · ${domPct}%</div>
+        <div class="wind-rose-src">ERA5 · ${yearsData||30} ans</div>
+      </div>`;
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.disableScrollPropagation(d);
+    return d;
+  };
+  windControl.addTo(siteMap);
+}
+
+let windZoomLegend=null;
+
+function drawWindArrow(lat,lon,angle,name,pct,speed){
+  // Flèche sur la carte rapprochée montrant d'où vient le vent
+  if(windArrow) siteMapZoom.removeLayer(windArrow);
+  if(windArrowHead) siteMapZoom.removeLayer(windArrowHead);
+
+  const arrowLen=60; // mètres — adapté au zoom 17
+  // Le vent VIENT de cette direction, donc la flèche pointe VERS le site
+  const fromAngle=angle;
+  const[fromLat,fromLon]=offsetLL(lat,lon,fromAngle,arrowLen);
+
+  windArrow=L.polyline([[fromLat,fromLon],[lat,lon]],{
+    color:'#e53935',weight:3,opacity:0.8,dashArray:'6,4'
+  }).addTo(siteMapZoom);
+
+  // Pointe de flèche (triangle au site)
+  const headLen=15;
+  const[h2Lat,h2Lon]=offsetLL(lat,lon,(fromAngle+30)%360,headLen*0.6);
+  const[h3Lat,h3Lon]=offsetLL(lat,lon,(fromAngle-30+360)%360,headLen*0.6);
+  windArrowHead=L.polygon([[h2Lat,h2Lon],[lat,lon],[h3Lat,h3Lon]],{
+    color:'#e53935',weight:2,fillColor:'#e53935',fillOpacity:0.6
+  }).addTo(siteMapZoom);
+
+  // Tooltip au hover seulement (ne cache pas le bâtiment)
+  windArrow.bindTooltip(`🌬️ Vent dominant : <strong>${name}</strong> (${pct}%)`,
+    {permanent:false,direction:'top',className:'oro-tooltip'});
+
+  // Légende compacte en coin (ne gêne pas la vue)
+  if(windZoomLegend) siteMapZoom.removeControl(windZoomLegend);
+  windZoomLegend=L.control({position:'bottomright'});
+  windZoomLegend.onAdd=function(){
+    const d=L.DomUtil.create('div','wind-zoom-legend');
+    d.innerHTML=`<div class="wind-zoom-row">🌬️ <strong>${name}</strong> · ${pct}%</div>
+      <div class="wind-zoom-sub">Direction dominante · ERA5 30 ans</div>`;
+    return d;
+  };
+  windZoomLegend.addTo(siteMapZoom);
 }
 
 // ═══ 7. STATE ═══

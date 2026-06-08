@@ -227,10 +227,117 @@ body {
 .accent-seism .zc-value { color: var(--seism); }
 
 /* ═══ MAP ═══ */
-.maps-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-.map-panel { border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-#site-map, #site-map-zoom { height: 200px; }
-.map-caption { display: block; text-align: center; font-size: 9px; color: var(--text2); padding: 4px; background: #fafbfc; border-top: 1px solid var(--border); }
+.maps-duo {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 6px;
+}
+.map-panel {
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+#site-map, #site-map-zoom { height: 260px; }
+.map-caption {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text2); padding: 6px 12px;
+  background: linear-gradient(to right, #f0f4f8, #fafbfc);
+  border-top: 1px solid var(--border); font-weight: 500;
+}
+.map-source {
+  font-size: 9px; color: #999; text-align: center;
+  margin-bottom: 14px; font-style: italic;
+}
+
+/* Site marker */
+.site-marker-icon { background: none !important; border: none !important; }
+.site-pin { position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+.site-pin-inner {
+  font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  z-index: 2; position: relative; line-height: 1;
+}
+.site-pin-pulse {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 20px; height: 20px; background: rgba(41,152,178,0.3);
+  border-radius: 50%; animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: translateX(-50%) scale(0.8); opacity: 1; }
+  100% { transform: translateX(-50%) scale(2.5); opacity: 0; }
+}
+
+/* Orography tooltip */
+.oro-tooltip {
+  background: rgba(12,18,47,0.88) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 3px 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 10px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+.oro-tooltip::before { border-top-color: rgba(12,18,47,0.88) !important; }
+
+/* Orography legend */
+.oro-legend {
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  line-height: 1.6;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.oro-legend-title {
+  font-weight: 700; font-size: 10px; color: var(--navy);
+  margin-bottom: 4px; padding-bottom: 3px;
+  border-bottom: 1px solid #e0e0e0;
+  letter-spacing: 0.3px;
+}
+.oro-legend-row { display: flex; align-items: center; gap: 6px; color: #333; }
+.oro-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.oro-legend-sub { font-size: 9px; color: #999; margin-top: 3px; padding-top: 3px; border-top: 1px solid #eee; }
+
+/* Leaflet layer control branding */
+.leaflet-control-layers { border-radius: 6px !important; box-shadow: 0 2px 12px rgba(0,0,0,0.12) !important; border: 1px solid rgba(0,0,0,0.08) !important; }
+.leaflet-control-layers-expanded { padding: 8px 12px !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
+.leaflet-control-layers label { margin-bottom: 2px; cursor: pointer; }
+.leaflet-control-scale-line { border-color: var(--navy) !important; font-family: 'Inter', sans-serif !important; font-size: 9px !important; }
+
+/* Wind rose control */
+.wind-rose-ctrl {
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 8px 10px 6px;
+  font-family: 'Inter', sans-serif;
+  margin-top: 44px !important;
+}
+.wind-rose-title {
+  font-size: 10px; font-weight: 700; color: var(--navy);
+  text-align: center; margin-bottom: 2px; letter-spacing: 0.3px;
+}
+.wind-rose-info { text-align: center; margin-top: 2px; }
+.wind-rose-dom { font-size: 11px; color: var(--navy); }
+.wind-rose-speed { font-size: 10px; color: var(--text2); }
+.wind-rose-src { font-size: 8px; color: #bbb; margin-top: 2px; }
+
+/* Wind zoom legend (carte rapprochée — coin bas-droit) */
+.wind-zoom-legend {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.08);
+  font-family: 'Inter', sans-serif;
+  border-left: 3px solid #e53935;
+}
+.wind-zoom-row { font-size: 11px; color: var(--navy); }
+.wind-zoom-sub { font-size: 8px; color: #999; margin-top: 1px; }
 
 /* ═══ PARAMS ═══ */
 .params-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
@@ -329,10 +436,12 @@ body {
   .page:last-child { page-break-after: avoid; }
   .page::before { border-width: 1pt; }
   .usage-bar, .btn-calc, .input-spinner, .suggestions, .modal-overlay { display: none !important; }
+  .leaflet-control-layers, .leaflet-control-zoom, .site-pin-pulse, .oro-legend { display: none !important; }
   .input-wrapper input { border: none; background: transparent; padding: 0; font-weight: 600; }
   .param-card input, .param-card select { border: none; background: transparent; padding: 0; font-weight: 600; -webkit-appearance: none; }
   .hdr-input { border: none; background: transparent; }
-  #site-map { height: 180px; }
+  #site-map { height: 250px; }
+  .map-caption .map-hint { display: none; }
   @page { margin: 0; size: A4 portrait; }
 }
 
